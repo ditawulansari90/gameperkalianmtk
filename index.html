@@ -172,3 +172,106 @@
 
 </body>
 </html>
+<!-- Form Pengiriman Hasil Tugas ke Guru -->
+<div id="form-kirim-nilai" style="max-width: 400px; margin: 20px auto; padding: 20px; border: 2px solid #4CAF50; border-radius: 10px; font-family: Arial, sans-serif; background-color: #f9f9f9; text-align: center;">
+  <h3 style="color: #333;">Kirim Hasil Tugas ke Guru</h3>
+  
+  <label style="display:block; margin-bottom: 5px; text-align: left; font-weight: bold;">Pilih Nama / Absen Siswa:</label>
+  <select id="selectSiswa" style="width: 100%; padding: 8px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc;">
+    <option value="">-- Muat Daftar Siswa... --</option>
+  </select>
+
+  <label style="display:block; margin-bottom: 5px; text-align: left; font-weight: bold;">Mata Pelajaran:</label>
+  <input type="text" id="inputMapel" value="IPA" placeholder="Contoh: IPA" style="width: 95%; padding: 8px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc;">
+
+  <label style="display:block; margin-bottom: 5px; text-align: left; font-weight: bold;">Nama Tugas / Game:</label>
+  <input type="text" id="inputTugas" value="Kuis Ekosistem" placeholder="Contoh: Kuis Ekosistem" style="width: 95%; padding: 8px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc;">
+
+  <label style="display:block; margin-bottom: 5px; text-align: left; font-weight: bold;">Nilai / Skor:</label>
+  <input type="number" id="inputNilai" placeholder="Masukkan Skor (misal: 100)" style="width: 95%; padding: 8px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc;">
+
+  <button onclick="kirimNilaiKeGuru()" id="btnKirim" style="width: 100%; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">
+    🚀 Kirim Laporan ke Guru
+  </button>
+
+  <p id="statusKirim" style="margin-top: 15px; font-weight: bold;"></p>
+</div>
+
+<script>
+  // Link Web App Google Apps Script Anda
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzXZQcWGKAYLbz9X9O2_-Qs4mIlvtf9M0xlMa-0ZwxuRBmoE9dhjmXDyGjEUAxMpEHe/exec";
+
+  // Memuat daftar siswa otomatis dari Google Sheets saat halaman dibuka
+  window.onload = function() {
+    fetch(SCRIPT_URL)
+      .then(response => response.json())
+      .then(data => {
+        const select = document.getElementById("selectSiswa");
+        select.innerHTML = '<option value="">-- Pilih Nama Siswa --</option>';
+        data.forEach(siswa => {
+          if (siswa.namaSiswa) {
+            let option = document.createElement("option");
+            option.value = JSON.stringify({ absen: siswa.nomorAbsen, nama: siswa.namaSiswa });
+            option.text = `${siswa.nomorAbsen}. ${siswa.namaSiswa}`;
+            select.appendChild(option);
+          }
+        });
+      })
+      .catch(err => {
+        console.error("Gagal memuat daftar siswa:", err);
+        document.getElementById("selectSiswa").innerHTML = '<option value="">-- Gagal memuat daftar --</option>';
+      });
+  };
+
+  // Fungsi untuk mengirim data nilai ke Google Sheets
+  function kirimNilaiKeGuru() {
+    const selectSiswaValue = document.getElementById("selectSiswa").value;
+    const mapel = document.getElementById("inputMapel").value;
+    const tugas = document.getElementById("inputTugas").value;
+    const nilai = document.getElementById("inputNilai").value;
+    const statusText = document.getElementById("statusKirim");
+    const btnKirim = document.getElementById("btnKirim");
+
+    if (!selectSiswaValue) {
+      alert("Silakan pilih nama siswa terlebih dahulu!");
+      return;
+    }
+    if (!nilai) {
+      alert("Silakan isi nilai/skor terlebih dahulu!");
+      return;
+    }
+
+    const siswaData = JSON.parse(selectSiswaValue);
+
+    statusText.style.color = "blue";
+    statusText.innerText = "Sedang mengirim data...";
+    btnKirim.disabled = true;
+
+    const payload = {
+      nomorAbsen: siswaData.absen,
+      namaSiswa: siswaData.nama,
+      mataPelajaran: mapel,
+      namaTugas: tugas,
+      nilai: parseInt(nilai)
+    };
+
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(() => {
+      statusText.style.color = "green";
+      statusText.innerText = "✅ Berhasil! Nilai Anda sudah tersimpan di akun guru.";
+      document.getElementById("inputNilai").value = "";
+      btnKirim.disabled = false;
+    })
+    .catch(err => {
+      console.error(err);
+      statusText.style.color = "red";
+      statusText.innerText = "❌ Gagal mengirim. Coba lagi.";
+      btnKirim.disabled = false;
+    });
+  }
+</script>
